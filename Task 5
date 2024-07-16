@@ -1,0 +1,80 @@
+
+pip install scapy
+Requirement already satisfied: scapy in c:\users\desktop\appdata\local\programs\python\python312\lib\site-packages (2.5.0)
+Note: you may need to restart the kernel to use updated packages.
+import socket
+
+def start_server(port):
+    try:
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind(('0.0.0.0', port))  # Bind to all interfaces
+        server_socket.listen(5)
+        print(f"Server started on port {port}")
+        
+        while True:
+            client_socket, addr = server_socket.accept()
+            print(f"Connection from {addr}")
+            # Handle client connection
+            client_socket.close()
+    
+    except PermissionError as e:
+        print(f"Permission error: {e}")
+    except OSError as e:
+        print(f"OS error: {e}")
+    finally:
+        server_socket.close()
+
+if __name__ == "__main__":
+    start_server(8080)  # Change to the desired port
+Server started on port 8080
+import socket
+import struct
+import binascii
+
+def parse_packet(packet):
+    # Parse the Ethernet header
+    eth_header = packet[:14]
+    eth_dst, eth_src, eth_type = struct.unpack('!6s6sH', eth_header)
+    eth_dst = binascii.hexlify(eth_dst).decode()
+    eth_src = binascii.hexlify(eth_src).decode()
+    eth_type = hex(eth_type)
+
+    # Parse the IP header
+    ip_header = packet[14:34]
+    ip_header_unpack = struct.unpack('!BBHHHBBH4s4s', ip_header)
+    ip_version = ip_header_unpack[0] >> 4
+    ip_ihl = ip_header_unpack[0] & 0xF
+    ip_ttl = ip_header_unpack[5]
+    ip_proto = ip_header_unpack[6]
+    ip_src = socket.inet_ntoa(ip_header_unpack[8])
+    ip_dst = socket.inet_ntoa(ip_header_unpack[9])
+
+    # Parse the TCP header
+    tcp_header = packet[34:54]
+    tcp_header_unpack = struct.unpack('!HHLLBBHHH', tcp_header)
+    tcp_src_port = tcp_header_unpack[0]
+    tcp_dst_port = tcp_header_unpack[1]
+    tcp_seq_num = tcp_header_unpack[2]
+    tcp_ack_num = tcp_header_unpack[3]
+    tcp_offset = tcp_header_unpack[4] >> 4
+    tcp_flags = tcp_header_unpack[5]
+
+    # Print the packet information
+    print(f"Ethernet Header: Src {eth_src}, Dst {eth_dst}, Type {eth_type}")
+    print(f"IP Header: Version {ip_version}, IHL {ip_ihl}, TTL {ip_ttl}, Protocol {ip_proto}, Src {ip_src}, Dst {ip_dst}")
+    print(f"TCP Header: Src Port {tcp_src_port}, Dst Port {tcp_dst_port}, Seq Num {tcp_seq_num}, Ack Num {tcp_ack_num}, Offset {tcp_offset}, Flags {tcp_flags}")
+    print()
+
+def start_sniffer():
+    # Create a raw socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+
+    while True:
+        # Receive a packet
+        packet = sock.recvfrom(65565)[0]
+        parse_packet(packet)
+
+if __name__ == "__main__":
+    start_sniffer()
+pip install --upgrade scapy
+ 
